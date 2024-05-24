@@ -106,6 +106,21 @@
             from {bottom: 30px; opacity: 1;}
             to {bottom: 0; opacity: 0;}
         }
+        #log {
+            margin-top: 20px;
+            width: 90%;
+            max-width: 600px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: 200px;
+        }
+        #log p {
+            font-size: 14px;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -117,6 +132,7 @@
     </form>
     <p id="shortUrl"></p>
     <div id="toast" class="toast"></div>
+    <div id="log"><strong>Log:</strong></div>
 
     <script>
         document.getElementById('urlForm').addEventListener('submit', function(event) {
@@ -128,8 +144,11 @@
 
             if (!isValidUrl(longUrl)) {
                 showToast('Invalid URL. Please enter a valid URL.');
+                logMessage('Invalid URL entered.');
                 return;
             }
+
+            logMessage(`Requesting short URL for: ${longUrl}`);
 
             fetch(apiUrl, {
                 method: 'POST',
@@ -149,12 +168,15 @@
                     const shortUrlElement = document.getElementById('shortUrl');
                     shortUrlElement.innerHTML = `Short URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a> <button onclick="copyToClipboard('${shortUrl}')">Copy</button>`;
                     showToast('URL shortened successfully!');
+                    logMessage(`Short URL created: ${shortUrl}`);
                 } else {
-                    showToast(`Error: ${data.message}`);
+                    showToast(`Error: ${data.message} (Code: ${data.code})`);
+                    logMessage(`Error: ${data.message} (Code: ${data.code})`);
                 }
             })
             .catch(error => {
                 showToast(`Error: ${error.message}`);
+                logMessage(`Error: ${error.message}`);
             });
         });
 
@@ -170,8 +192,10 @@
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(function() {
                 showToast('Copied to clipboard!');
+                logMessage(`Copied to clipboard: ${text}`);
             }, function(err) {
                 showToast('Failed to copy: ' + err);
+                logMessage('Failed to copy: ' + err);
             });
         }
 
@@ -182,6 +206,14 @@
             setTimeout(() => {
                 toast.className = toast.className.replace('show', '');
             }, 3000);
+        }
+
+        function logMessage(message) {
+            const log = document.getElementById('log');
+            const logEntry = document.createElement('p');
+            logEntry.textContent = message;
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
         }
     </script>
 </body>
