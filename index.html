@@ -47,13 +47,14 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Chyba při zkracování URL');
+                    const errorText = await response.text();
+                    throw new Error(`Chyba při zkracování URL: ${response.status} ${response.statusText} - ${errorText}`);
                 }
 
                 const result = await response.json();
                 const resultDiv = document.getElementById('result');
                 if (result.secureShortURL) {
-                    const clicksResponse = await fetch(`https://api.short.io/statistics?domain=l.hostio.xyz&path=${result.path}`, {
+                    const clicksResponse = await fetch(`https://api.short.io/statistics?domain=l.hostio.xyz&path=${result.path || slug}`, {
                         method: 'GET',
                         headers: {
                             'Authorization': 'sk_uMRAYV9kigyqjyzO'
@@ -61,7 +62,8 @@
                     });
 
                     if (!clicksResponse.ok) {
-                        throw new Error('Chyba při získávání statistik');
+                        const errorText = await clicksResponse.text();
+                        throw new Error(`Chyba při získávání statistik: ${clicksResponse.status} ${clicksResponse.statusText} - ${errorText}`);
                     }
 
                     const clicksResult = await clicksResponse.json();
@@ -73,6 +75,7 @@
                     resultDiv.innerHTML = `<p class="text-red-500">Něco se pokazilo, zkuste to prosím znovu.</p>`;
                 }
             } catch (error) {
+                console.error('Error:', error);
                 document.getElementById('result').innerHTML = `<p class="text-red-500">${error.message}</p>`;
             }
         });
