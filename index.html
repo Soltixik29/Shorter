@@ -1,84 +1,188 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostio Shorter</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>URL Shortener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #shortUrl {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #shortUrl a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        #shortUrl button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #shortUrl button:hover {
+            background-color: #218838;
+        }
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 17px;
+        }
+        .toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @-webkit-keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+        @-webkit-keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
-        <h1 class="text-3xl font-bold text-center mb-4 text-gray-800">Hostio Shorter</h1>
-        <form id="urlForm" class="space-y-4">
-            <div>
-                <label for="longUrl" class="block text-sm font-medium text-gray-700">Dlouhá URL</label>
-                <input type="url" id="longUrl" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Zadejte URL k zkrácení" required>
-            </div>
-            <div>
-                <label for="slug" class="block text-sm font-medium text-gray-700">Vlastní Slug</label>
-                <input type="text" id="slug" class="mt-1 block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Zadejte vlastní slug (nepovinné)">
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded-md hover:bg-indigo-700">Zkrátit URL</button>
-        </form>
-        <div id="result" class="mt-4 text-center"></div>
-    </div>
+<body>
+    <h1>URL Shortener</h1>
+    <form id="urlForm">
+        <label for="longUrl">Enter URL to shorten:</label>
+        <input type="text" id="longUrl" name="longUrl" required placeholder="https://example.com">
+        <button type="submit">Shorten URL</button>
+    </form>
+    <p id="shortUrl"></p>
+    <div id="toast" class="toast"></div>
 
     <script>
-        document.getElementById('urlForm').addEventListener('submit', async function(event) {
+        document.getElementById('urlForm').addEventListener('submit', function(event) {
             event.preventDefault();
+
             const longUrl = document.getElementById('longUrl').value;
-            const slug = document.getElementById('slug').value;
-            const requestBody = {
-                originalURL: longUrl,
-                domain: 'l.hostio.xyz'
-            };
-            if (slug) {
-                requestBody.path = slug;
+            const apiKey = 'pk_X22jx3uFq6N0rdbB';
+            const apiUrl = 'https://api.short.io/links';
+
+            if (!isValidUrl(longUrl)) {
+                showToast('Invalid URL. Please enter a valid URL.');
+                return;
             }
 
-            try {
-                const response = await fetch('https://api.short.io/links', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'sk_uMRAYV9kigyqjyzO'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Chyba při zkracování URL: ${response.status} ${response.statusText} - ${errorText}`);
-                }
-
-                const result = await response.json();
-                const resultDiv = document.getElementById('result');
-                if (result.secureShortURL) {
-                    const clicksResponse = await fetch(`https://api.short.io/statistics?domain=l.hostio.xyz&path=${result.path || slug}`, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': 'sk_uMRAYV9kigyqjyzO'
-                        }
-                    });
-
-                    if (!clicksResponse.ok) {
-                        const errorText = await clicksResponse.text();
-                        throw new Error(`Chyba při získávání statistik: ${clicksResponse.status} ${clicksResponse.statusText} - ${errorText}`);
-                    }
-
-                    const clicksResult = await clicksResponse.json();
-                    const clickCount = clicksResult.totalClicks || 0;
-
-                    resultDiv.innerHTML = `<p class="text-lg text-gray-800">Zkrácená URL: <a href="${result.secureShortURL}" class="text-blue-500 underline" target="_blank">${result.secureShortURL}</a></p>
-                                           <p class="text-lg text-gray-800">Počet kliknutí: ${clickCount}</p>`;
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': apiKey
+                },
+                body: JSON.stringify({
+                    originalURL: longUrl,
+                    domain: 'l.hostio.xyz'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.shortURL) {
+                    const shortUrl = data.shortURL;
+                    const shortUrlElement = document.getElementById('shortUrl');
+                    shortUrlElement.innerHTML = `Short URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a> <button onclick="copyToClipboard('${shortUrl}')">Copy</button>`;
+                    showToast('URL shortened successfully!');
                 } else {
-                    resultDiv.innerHTML = `<p class="text-red-500">Něco se pokazilo, zkuste to prosím znovu.</p>`;
+                    showToast(`Error: ${data.message}`);
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('result').innerHTML = `<p class="text-red-500">${error.message}</p>`;
-            }
+            })
+            .catch(error => {
+                showToast(`Error: ${error.message}`);
+            });
         });
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('Copied to clipboard!');
+            }, function(err) {
+                showToast('Failed to copy: ' + err);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+            setTimeout(() => {
+                toast.className = toast.className.replace('show', '');
+            }, 3000);
+        }
     </script>
 </body>
 </html>
